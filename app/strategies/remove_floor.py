@@ -1,0 +1,1 @@
+# Strategy: Remove floor points
