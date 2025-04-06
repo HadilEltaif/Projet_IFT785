@@ -1,0 +1,23 @@
+{% extends 'partials/base.html' %}
+
+{% block content %}
+<section class="content-section about-section">
+    <h2 class="section-title">👩‍💻 À propos</h2>
+
+    <div class="about-container">
+        <img src="{{ url_for('static', filename='images/hadil.jpg') }}" alt="Photo de Hadil" class="about-photo">
+        
+        <div class="about-text">
+            <p>
+                Je suis <strong>Hadil Eltaif</strong>, étudiante à la maîtrise en informatique à l’Université de Sherbrooke.
+                Je travaille en tant qu’assistante de recherche au <strong>DOMUS Lab</strong>, où je m’intéresse à la détection
+                d’activité humaine dans les habitats intelligents à l’aide de capteurs LiDAR.
+            </p>
+            <p>
+                Ce projet a pour objectif de traiter, visualiser et interpréter des données LiDAR afin de détecter des personnes
+                et leurs mouvements dans un environnement 3D.
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

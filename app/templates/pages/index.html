@@ -1,0 +1,25 @@
+{% extends 'partials/base.html' %}
+{% block title %}Accueil - Détection LiDAR{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h2 class="hero-title">Bienvenue sur le projet</h2>
+    <h1 class="hero-subtitle">Détection des personnes via des données LiDAR 🚀</h1>
+    <p class="hero-text">
+        Analysez vos données LiDAR en téléversant vos fichiers et en explorant les résultats grâce aux modules interactifs.
+    </p>
+</section>
+
+<section class="features">
+    <div class="feature-card">
+        <h3>📤 Téléversement</h3>
+        <p>Importez vos fichiers `.pcd` pour commencer l’analyse.</p>
+        <a class="btn btn-primary" href="{{ url_for('lidar.upload') }}">Accéder</a>
+    </div>
+    <div class="feature-card">
+        <h3>👀 Visualisation</h3>
+        <p>Affichez vos nuages de points en 3D de façon intuitive.</p>
+        <a class="btn btn-secondary" href="{{ url_for('lidar.visualize') }}">Accéder</a>
+    </div>
+</section>
+{% endblock %}
