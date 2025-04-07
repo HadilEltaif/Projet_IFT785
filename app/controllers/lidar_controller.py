@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, flash, url_for, send_from_directory, jsonify
 from app.services.file_service import FileService
+from app.services.file_service import FileService
+from app.services.pointcloud_service import PointCloudService
 import os
 import json
 
@@ -42,21 +44,26 @@ def contact():
 
 @lidar_bp.route('/visualize/')
 def visualize():
-    latest_file = None
-    upload_folder = 'uploads'
-
+    upload_folder = os.path.join('uploads')
+    files = []
     try:
         files = sorted(
-            [f for f in os.listdir(upload_folder) if f.endswith(('.pcd', '.ply'))],
-            key=lambda x: os.path.getmtime(os.path.join(upload_folder, x)),
-            reverse=True
+            [f for f in os.listdir(upload_folder) if f.endswith(('.pcd', '.ply', '.bin'))]
         )
-        if files:
-            latest_file = files[0]
     except Exception as e:
         print(f"Erreur lecture fichiers: {e}")
 
-    return render_template("pages/visualize.html", filename=latest_file)
+    return render_template("pages/visualize.html", files=files)
+
+
+@lidar_bp.route('/api/points/<filename>')
+def get_points(filename):
+    filepath = os.path.join('uploads', filename)
+    try:
+        data_json = PointCloudService.get_point_cloud_json(filepath)
+        return jsonify(json.loads(data_json))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "uploads")
 
@@ -64,16 +71,6 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-
-@lidar_bp.route('/api/points/<filename>')
-def get_points(filename):
-    filepath = f"uploads/{filename}"
-    try:
-        from app.services.pointcloud_service import PointCloudService
-        data_json = PointCloudService.get_point_cloud_json(filepath)
-        return jsonify(json.loads(data_json))
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 @lidar_bp.route('/preprocess')
 def preprocess():

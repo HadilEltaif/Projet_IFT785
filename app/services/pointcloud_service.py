@@ -1,17 +1,22 @@
+import struct
 import json
-import numpy as np
-from app.factories.loader_factory import LoaderFactory
-from app.services.file_service import FileService
+import open3d as o3d
 
 class PointCloudService:
+    @staticmethod
+    def get_point_cloud_data(filepath):
+        if filepath.endswith(('.pcd', '.ply', '.bin')):
+            return PointCloudService._parse_with_open3d(filepath)
+        else:
+            raise ValueError("Unsupported file format")
+
+    @staticmethod
+    def _parse_with_open3d(filepath):
+        pcd = o3d.io.read_point_cloud(filepath)
+        points = [[float(p[0]), float(p[1]), float(p[2])] for p in pcd.points]
+        return points
 
     @staticmethod
     def get_point_cloud_json(filepath):
-        extension = filepath.rsplit(".", 1)[-1].lower()
-        loader = LoaderFactory.get_loader(extension)
-        pcd = loader.load(filepath)
-
-        points = np.asarray(pcd.points)
-        point_list = [{"x": float(p[0]), "y": float(p[1]), "z": float(p[2])} for p in points]
-        return json.dumps(point_list)
-
+        points = PointCloudService.get_point_cloud_data(filepath)
+        return json.dumps(points)
