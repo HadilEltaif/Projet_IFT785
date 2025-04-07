@@ -45,15 +45,21 @@ def contact():
 @lidar_bp.route('/visualize/')
 def visualize():
     upload_folder = os.path.join('uploads')
-    files = []
+
+    # 🔁 Obtenir le nom du fichier à partir de l'URL (paramètre GET)
+    filename = request.args.get('filename')
+
+    # 📦 Liste des fichiers disponibles pour l'affichage dans le <select>
     try:
         files = sorted(
             [f for f in os.listdir(upload_folder) if f.endswith(('.pcd', '.ply', '.bin'))]
         )
     except Exception as e:
         print(f"Erreur lecture fichiers: {e}")
+        files = []
 
-    return render_template("pages/visualize.html", files=files)
+    return render_template("pages/visualize.html", files=files, filename=filename)
+
 
 
 @lidar_bp.route('/api/points/<filename>')
