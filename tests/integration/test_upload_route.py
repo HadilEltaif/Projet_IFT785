@@ -35,3 +35,6 @@ def test_upload_no_file(client):
     )
     assert response.status_code == 200
     assert "Aucun fichier sélectionné".encode('utf-8') in response.data
+    
+    
+    
