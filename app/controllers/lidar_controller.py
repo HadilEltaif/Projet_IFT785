@@ -59,10 +59,7 @@ def visualize():
     filename = request.args.get('filename')
 
     try:
-        files = sorted([
-            f for f in os.listdir(upload_folder)
-            if f.endswith(('.pcd', '.ply', '.bin'))
-        ])
+        files = sorted([f for f in os.listdir(upload_folder) if f.endswith(('.pcd', '.ply', '.bin'))])
     except Exception as e:
         print(f"Erreur lecture fichiers: {e}")
         files = []
@@ -73,6 +70,8 @@ def visualize():
 @lidar_bp.route('/api/points/<filename>')
 def get_points(filename):
     filepath = os.path.join("uploads", filename)
+    if not os.path.exists(filepath):
+        filepath = os.path.join("uploads", "processed", filename)
     try:
         data_json = PointCloudService.get_point_cloud_json(filepath)
         return jsonify(json.loads(data_json))
@@ -82,13 +81,14 @@ def get_points(filename):
 
 @lidar_bp.route('/uploads/<path:filename>')
 def uploaded_file(filename):
+    if os.path.exists(os.path.join(UPLOAD_FOLDER, "processed", filename)):
+        return send_from_directory(os.path.join(UPLOAD_FOLDER, "processed"), filename)
     return send_from_directory(UPLOAD_FOLDER, filename)
 
 
 @lidar_bp.route("/preprocess/")
 def preprocess_page():
-    upload_folder = os.path.join("uploads")
-    files = [f for f in os.listdir(upload_folder) if f.endswith(('.pcd', '.ply', '.bin'))]
+    files = [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith(('.pcd', '.ply', '.bin'))]
     return render_template("pages/preprocess.html", files=files)
 
 
@@ -106,3 +106,10 @@ def preprocess_and_return_json(step, filename):
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@lidar_bp.route("/download/<filename>")
+def download_file(filename):
+    path = os.path.join(PROCESSED_FOLDER, filename)
+    if not os.path.exists(path):
+        return "Fichier introuvable", 404
+    return send_file(path, as_attachment=True)

@@ -32,20 +32,19 @@ class PreprocessingService:
 
     @staticmethod
     def apply_step_and_save(file_path, strategy_name):
-        # Load point cloud
+        # Load
         pcd = PreprocessingService.load_point_cloud(file_path)
 
-        # Apply strategy
+        # Apply
         processed_pcd = PreprocessingService.apply_strategy(pcd, strategy_name)
 
-        # Save result in uploads/processed
+        # Save
         processed_dir = os.path.join("uploads", "processed")
         os.makedirs(processed_dir, exist_ok=True)
-
         filename = os.path.basename(file_path)
         new_path = os.path.join(processed_dir, f"{strategy_name}_{filename}")
         o3d.io.write_point_cloud(new_path, processed_pcd)
 
-        # Return JSON + path
+        # Convert to JSON
         json_data = PointCloudService.pcd_to_json(processed_pcd)
         return json_data, new_path

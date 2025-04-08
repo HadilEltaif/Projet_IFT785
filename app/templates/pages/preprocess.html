@@ -1,80 +1,116 @@
-{% extends 'partials/base.html' %}
+{% extends "partials/base.html" %}
 
 {% block content %}
-<div class="container mt-5">
-    <h2 class="mb-4">Prétraitement interactif</h2>
+<div class="container mt-4">
+  <h2>Prétraitement des Données LiDAR</h2>
+  <form id="preprocess-form" class="mt-4">
+    <div class="mb-3">
+      <label for="file-select" class="form-label">Sélectionner un fichier :</label>
+      <select id="file-select" class="form-select" name="filename" required>
+        {% for file in files %}
+        <option value="{{ file }}">{{ file }}</option>
+        {% endfor %}
+      </select>
+    </div>
 
     <div class="mb-3">
-        <label for="filename" class="form-label">Choisir un fichier :</label>
-        <select class="form-select" id="filename">
-            {% for file in files %}
-            <option value="{{ file }}">{{ file }}</option>
-            {% endfor %}
-        </select>
+      <label for="step-select" class="form-label">Étape de prétraitement :</label>
+      <select id="step-select" class="form-select" name="step" required>
+        <option value="remove_top_bottom">Suppression haut/bas</option>
+        <option value="remove_side_points">Suppression côtés</option>
+        <option value="remove_outliers">Suppression outliers</option>
+        <option value="remove_floor">Suppression sol</option>
+        <option value="downsample">Downsampling</option>
+      </select>
     </div>
 
-    <div class="mb-3">
-        <label for="step" class="form-label">Étape de prétraitement :</label>
-        <select class="form-select" id="step">
-            <option value="remove_top_bottom">Supprimer Haut/Bas</option>
-            <option value="remove_floor">Supprimer Sol</option>
-            <option value="remove_side_points">Supprimer Côtés</option>
-            <option value="remove_outliers">Supprimer Valeurs Aberrantes</option>
-            <option value="downsample">Rééchantillonner</option>
-        </select>
-    </div>
+    <button type="submit" class="btn btn-primary">Appliquer le prétraitement</button>
+    <button type="button" id="download-btn" class="btn btn-success ms-2" style="display: none;">Télécharger</button>
+  </form>
 
-    <button class="btn btn-primary" onclick="applyStep()">Appliquer l'étape</button>
-
-    <div class="mt-4">
-        <h4>Résultat :</h4>
-        <div id="viewer" style="height: 400px; background-color: #000;"></div>
-    </div>
+  <h4 class="mt-5">Résultat :</h4>
+  <div id="viewer" style="width: 100%; height: 500px;"></div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.min.js"></script>
+
 <script>
-function applyStep() {
-    const filename = document.getElementById("filename").value;
-    const step = document.getElementById("step").value;
+  const form = document.getElementById("preprocess-form");
+  const downloadBtn = document.getElementById("download-btn");
+  let latestFilename = "";
 
-    fetch(`/preprocess_step/${step}/${filename}`)
-        .then(response => response.json())
-        .then(result => {
-            if (result.error) {
-                alert("Erreur : " + result.error);
-                return;
-            }
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const filename = document.getElementById("file-select").value;
+    const step = document.getElementById("step-select").value;
 
-            // Affichage des points 3D
-            renderPointCloud(result.data);
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Erreur lors de l'application de l'étape.");
-        });
-}
+    const response = await fetch(`/preprocess_step_and_return_json/${step}/${filename}`);
+    const result = await response.json();
 
-function renderPointCloud(data) {
-    const viewer = document.getElementById("viewer");
-    viewer.innerHTML = ""; // Nettoyer l'ancien rendu
+    if (result.error) {
+      alert("Erreur: " + result.error);
+      return;
+    }
 
-    const canvas = document.createElement("canvas");
-    canvas.width = viewer.clientWidth;
-    canvas.height = viewer.clientHeight;
-    viewer.appendChild(canvas);
+    latestFilename = result.filename;
+    downloadBtn.style.display = "inline-block";
 
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "white";
+    // Visualiser directement ici
+    visualizePointCloud(result.points);
+  });
 
-    const scale = 2;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+  downloadBtn.addEventListener("click", () => {
+    if (latestFilename) {
+      window.location.href = `/uploads/processed/${latestFilename}`;
+    }
+  });
 
-    data.points.forEach(p => {
-        const x = centerX + p[0] * scale;
-        const y = centerY - p[1] * scale;
-        ctx.fillRect(x, y, 2, 2);
+  // Visualisation Three.js
+  let scene, camera, renderer, controls;
+  initViewer();
+
+  function initViewer() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / 500, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, 500);
+
+    const container = document.getElementById("viewer");
+    container.innerHTML = ""; // Reset if needed
+    container.appendChild(renderer.domElement);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    camera.position.set(0, 0, 5);
+    controls.update();
+
+    animate();
+  }
+
+  function visualizePointCloud(points) {
+    // Reset scene
+    while (scene.children.length > 0) {
+      scene.remove(scene.children[0]);
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+
+    points.forEach(p => {
+      vertices.push(p.x, p.y, p.z);
     });
-}
+
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+    const material = new THREE.PointsMaterial({ size: 0.05, color: 0x00ffff });
+    const pointCloud = new THREE.Points(geometry, material);
+    scene.add(pointCloud);
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
 </script>
 {% endblock %}
