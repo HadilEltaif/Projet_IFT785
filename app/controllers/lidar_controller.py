@@ -101,11 +101,17 @@ def preprocess_and_return_json(step, filename):
     try:
         _, new_path = PreprocessingService.apply_step_and_save(file_path, step)
         processed_name = os.path.basename(new_path)
+        
+        # Ajouter cette ligne pour retourner les points
+        data_json = PointCloudService.get_point_cloud_json(new_path)
+
         return jsonify({
-            "filename": processed_name
+            "filename": processed_name,
+            "points": json.loads(data_json)  # important !
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @lidar_bp.route("/download/<filename>")
 def download_file(filename):
