@@ -1,11 +1,33 @@
-from flask import Blueprint, render_template, request, redirect, flash, url_for, send_from_directory, jsonify
-from app.services.file_service import FileService
-from app.services.file_service import FileService
-from app.services.pointcloud_service import PointCloudService
+from flask import Blueprint, render_template, request, jsonify, send_file, flash, redirect, url_for, send_from_directory
+from werkzeug.utils import secure_filename
 import os
+import tempfile
 import json
 
+from app.services.pointcloud_service import PointCloudService
+from app.services.preprocessing_service import PreprocessingService
+from app.services.file_service import FileService
+
 lidar_bp = Blueprint('lidar', __name__)
+
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "uploads")
+PROCESSED_FOLDER = os.path.join(UPLOAD_FOLDER, "processed")
+
+
+@lidar_bp.route('/')
+def index():
+    return render_template("pages/index.html")
+
+
+@lidar_bp.route('/about')
+def about():
+    return render_template("pages/about.html")
+
+
+@lidar_bp.route('/contact', methods=["GET", "POST"])
+def contact():
+    return render_template("pages/contact.html")
+
 
 @lidar_bp.route('/upload/', methods=["GET", "POST"])
 def upload():
@@ -30,30 +52,17 @@ def upload():
 
     return render_template("pages/upload.html")
 
-@lidar_bp.route('/')
-def index():
-    return render_template("pages/index.html")
-
-@lidar_bp.route('/about')
-def about():
-    return render_template("pages/about.html")
-
-@lidar_bp.route('/contact', methods=["GET", "POST"])
-def contact():
-    return render_template("pages/contact.html")
 
 @lidar_bp.route('/visualize/')
 def visualize():
-    upload_folder = os.path.join('uploads')
-
-    # 🔁 Obtenir le nom du fichier à partir de l'URL (paramètre GET)
+    upload_folder = os.path.join("uploads")
     filename = request.args.get('filename')
 
-    # 📦 Liste des fichiers disponibles pour l'affichage dans le <select>
     try:
-        files = sorted(
-            [f for f in os.listdir(upload_folder) if f.endswith(('.pcd', '.ply', '.bin'))]
-        )
+        files = sorted([
+            f for f in os.listdir(upload_folder)
+            if f.endswith(('.pcd', '.ply', '.bin'))
+        ])
     except Exception as e:
         print(f"Erreur lecture fichiers: {e}")
         files = []
@@ -61,31 +70,39 @@ def visualize():
     return render_template("pages/visualize.html", files=files, filename=filename)
 
 
-
 @lidar_bp.route('/api/points/<filename>')
 def get_points(filename):
-    filepath = os.path.join('uploads', filename)
+    filepath = os.path.join("uploads", filename)
     try:
         data_json = PointCloudService.get_point_cloud_json(filepath)
         return jsonify(json.loads(data_json))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "uploads")
 
 @lidar_bp.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
 
-@lidar_bp.route('/preprocess')
-def preprocess():
-    return "<h1>Prétraitement à venir</h1>"
+@lidar_bp.route("/preprocess/")
+def preprocess_page():
+    upload_folder = os.path.join("uploads")
+    files = [f for f in os.listdir(upload_folder) if f.endswith(('.pcd', '.ply', '.bin'))]
+    return render_template("pages/preprocess.html", files=files)
 
-@lidar_bp.route('/segment')
-def segment():
-    return "<h1>Segmentation à venir</h1>"
 
-@lidar_bp.route('/detect')
-def detect():
-    return "<h1>Détection à venir</h1>"
+@lidar_bp.route("/preprocess_step_and_return_json/<step>/<filename>")
+def preprocess_and_return_json(step, filename):
+    file_path = os.path.join("uploads", filename)
+    if not os.path.exists(file_path):
+        return jsonify({"error": "Fichier non trouvé."}), 404
+
+    try:
+        _, new_path = PreprocessingService.apply_step_and_save(file_path, step)
+        processed_name = os.path.basename(new_path)
+        return jsonify({
+            "filename": processed_name
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -1,0 +1,80 @@
+{% extends 'partials/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Prétraitement interactif</h2>
+
+    <div class="mb-3">
+        <label for="filename" class="form-label">Choisir un fichier :</label>
+        <select class="form-select" id="filename">
+            {% for file in files %}
+            <option value="{{ file }}">{{ file }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="step" class="form-label">Étape de prétraitement :</label>
+        <select class="form-select" id="step">
+            <option value="remove_top_bottom">Supprimer Haut/Bas</option>
+            <option value="remove_floor">Supprimer Sol</option>
+            <option value="remove_side_points">Supprimer Côtés</option>
+            <option value="remove_outliers">Supprimer Valeurs Aberrantes</option>
+            <option value="downsample">Rééchantillonner</option>
+        </select>
+    </div>
+
+    <button class="btn btn-primary" onclick="applyStep()">Appliquer l'étape</button>
+
+    <div class="mt-4">
+        <h4>Résultat :</h4>
+        <div id="viewer" style="height: 400px; background-color: #000;"></div>
+    </div>
+</div>
+
+<script>
+function applyStep() {
+    const filename = document.getElementById("filename").value;
+    const step = document.getElementById("step").value;
+
+    fetch(`/preprocess_step/${step}/${filename}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.error) {
+                alert("Erreur : " + result.error);
+                return;
+            }
+
+            // Affichage des points 3D
+            renderPointCloud(result.data);
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Erreur lors de l'application de l'étape.");
+        });
+}
+
+function renderPointCloud(data) {
+    const viewer = document.getElementById("viewer");
+    viewer.innerHTML = ""; // Nettoyer l'ancien rendu
+
+    const canvas = document.createElement("canvas");
+    canvas.width = viewer.clientWidth;
+    canvas.height = viewer.clientHeight;
+    viewer.appendChild(canvas);
+
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "white";
+
+    const scale = 2;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    data.points.forEach(p => {
+        const x = centerX + p[0] * scale;
+        const y = centerY - p[1] * scale;
+        ctx.fillRect(x, y, 2, 2);
+    });
+}
+</script>
+{% endblock %}
