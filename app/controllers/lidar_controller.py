@@ -99,19 +99,27 @@ def preprocess_and_return_json(step, filename):
         return jsonify({"error": "Fichier non trouvé."}), 404
 
     try:
+        # 🔹 Charger les points AVANT traitement
+        original_points = PointCloudService.get_numpy_array(file_path)
+        num_points_before = original_points.shape[0]
+
+        # 🔹 Appliquer le traitement
         _, new_path = PreprocessingService.apply_step_and_save(file_path, step)
         processed_name = os.path.basename(new_path)
-        
-        # Ajouter cette ligne pour retourner les points
-        data_json = PointCloudService.get_point_cloud_json(new_path)
 
+        # 🔹 Charger les points APRÈS traitement
+        processed_points = PointCloudService.get_numpy_array(new_path)
+        num_points_after = processed_points.shape[0]
+
+        # 🔹 Retourner les infos nécessaires
         return jsonify({
             "filename": processed_name,
-            "points": json.loads(data_json)  # important !
+            "points": processed_points.tolist(),
+            "points_before": num_points_before,
+            "points_after": num_points_after
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @lidar_bp.route("/download/<filename>")
 def download_file(filename):

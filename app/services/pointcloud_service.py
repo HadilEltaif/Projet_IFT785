@@ -31,3 +31,8 @@ class PointCloudService:
         """Convertit un nuage de points Open3D en JSON pour affichage Web"""
         points = np.asarray(pcd.points).tolist()
         return json.dumps({"points": points})
+
+    @staticmethod
+    def get_numpy_array(filepath):
+        pcd = o3d.io.read_point_cloud(filepath)
+        return np.asarray(pcd.points)
