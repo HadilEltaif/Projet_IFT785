@@ -68,15 +68,27 @@ python run.py
 
 ---
 
+
 ## 🧱 Design Patterns utilisés
 
-- **Factory** → pour le chargement flexible de fichiers (PCD, PLY, BIN)
-- **Strategy** → pour l'application dynamique de différents algorithmes de clustering
-- **Interface / Abstraction** → via `ILoader`, `IPreprocessing`, `IClustering`
-- **Single Responsibility** → chaque classe a une responsabilité claire
-- **Open/Closed Principle** → facile d’ajouter de nouveaux formats sans modifier l’existant
+Le projet applique plusieurs **design patterns classiques** afin d’assurer une architecture souple, modulaire et extensible :
 
+- **✅ Factory Pattern** : utilisé dans `factories/loader_factory.py` pour instancier dynamiquement des chargeurs selon l’extension du fichier (.pcd, .ply, .bin).
+- **✅ Strategy Pattern** : dans `strategies/`, chaque traitement (suppression du sol, outliers, downsampling...) est interchangeable via une interface `IPreprocessing`.
+- **✅ Singleton Pattern** : le fichier `utils/config.py` implémente un singleton `GlobalConfig` pour centraliser la configuration globale de l’application.
+- **✅ Command Pattern** : toutes les actions métier comme téléverser, prétraiter ou visualiser sont encapsulées sous forme de commandes dans `commands.py`, ce qui permet un contrôle clair et réutilisable.
+- **✅ Decorator Pattern** : les stratégies de prétraitement peuvent être enveloppées dans des décorateurs comme `StrategyLoggerDecorator` pour ajouter dynamiquement des logs ou métriques sans modifier les classes d'origine.
 ---
+
+## 🧭 Principes SOLID appliqués
+
+Le projet respecte plusieurs principes SOLID pour garantir une base de code propre, testable et évolutive :
+
+- **S — Single Responsibility Principle (SRP)** : chaque module (loader, service, strategy) a une responsabilité unique.
+- **O — Open/Closed Principle (OCP)** : il est possible d’ajouter de nouvelles stratégies ou extensions sans modifier le code existant.
+- **L — Liskov Substitution Principle (LSP)** : les interfaces `ILoader`, `IPreprocessing` permettent d’échanger librement les implémentations.
+- **I — Interface Segregation Principle (ISP)** : chaque interface est spécialisée (ex: séparation IClustering / IPreprocessing).
+- **D — Dependency Inversion Principle (DIP)** : les composants dépendent d’abstractions (interfaces) plutôt que d’implémentations concrètes, ce qui facilite le test unitaire et le remplacement dynamique.
 
 ## 🧪 Tests
 

@@ -4,6 +4,7 @@ import json
 import numpy as np
 from app.services.pointcloud_service import PointCloudService
 from app.strategies.preprocessing_strategy import PreprocessingStrategy
+from app.decorators.strategy_logger import StrategyLoggerDecorator
 from app.strategies.remove_top_bottom import RemoveTopBottomStrategy
 from app.strategies.remove_side_points import RemoveSidePointsStrategy
 from app.strategies.remove_outliers import RemoveOutliersStrategy
@@ -12,13 +13,12 @@ from app.strategies.downsampler import DownsamplerStrategy
 
 class PreprocessingService:
     strategies = {
-        "remove_top_bottom": RemoveTopBottomStrategy(),
-        "remove_side_points": RemoveSidePointsStrategy(),
-        "remove_outliers": RemoveOutliersStrategy(),
-        "remove_floor": RemoveFloorStrategy(),
-        "downsample": DownsamplerStrategy(),
+        "remove_top_bottom": StrategyLoggerDecorator(RemoveTopBottomStrategy()),
+        "remove_side_points": StrategyLoggerDecorator(RemoveSidePointsStrategy()),
+        "remove_outliers": StrategyLoggerDecorator(RemoveOutliersStrategy()),
+        "remove_floor": StrategyLoggerDecorator(RemoveFloorStrategy()),
+        "downsample": StrategyLoggerDecorator(DownsamplerStrategy()),
     }
-
     @staticmethod
     def load_point_cloud(file_path):
         return PointCloudService.load_point_cloud(file_path)
