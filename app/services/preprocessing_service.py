@@ -1,3 +1,4 @@
+
 import os
 import open3d as o3d
 import json
@@ -10,6 +11,7 @@ from app.strategies.remove_side_points import RemoveSidePointsStrategy
 from app.strategies.remove_outliers import RemoveOutliersStrategy
 from app.strategies.remove_floor import RemoveFloorStrategy
 from app.strategies.downsampler import DownsamplerStrategy
+from app.observers.observer import PreprocessingNotifier, LoggerObserver
 
 class PreprocessingService:
     strategies = {
@@ -19,6 +21,7 @@ class PreprocessingService:
         "remove_floor": StrategyLoggerDecorator(RemoveFloorStrategy()),
         "downsample": StrategyLoggerDecorator(DownsamplerStrategy()),
     }
+
     @staticmethod
     def load_point_cloud(file_path):
         return PointCloudService.load_point_cloud(file_path)
@@ -32,6 +35,10 @@ class PreprocessingService:
 
     @staticmethod
     def apply_step_and_save(file_path, strategy_name):
+        # Setup observer
+        notifier = PreprocessingNotifier()
+        notifier.attach(LoggerObserver())
+
         # Load
         pcd = PreprocessingService.load_point_cloud(file_path)
 
@@ -44,6 +51,9 @@ class PreprocessingService:
         filename = os.path.basename(file_path)
         new_path = os.path.join(processed_dir, f"{strategy_name}_{filename}")
         o3d.io.write_point_cloud(new_path, processed_pcd)
+
+        # Notify observers
+        notifier.notify(f"Étape '{strategy_name}' appliquée à {filename}")
 
         # Convert to JSON
         json_data = PointCloudService.pcd_to_json(processed_pcd)
