@@ -72,12 +72,14 @@ def get_points(filename):
     filepath = os.path.join("uploads", filename)
     if not os.path.exists(filepath):
         filepath = os.path.join("uploads", "processed", filename)
+        if not os.path.exists(filepath):
+            return jsonify({"error": "Fichier non trouvé."}), 404
+
     try:
         data_json = PointCloudService.get_point_cloud_json(filepath)
         return jsonify(json.loads(data_json))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @lidar_bp.route('/uploads/<path:filename>')
 def uploaded_file(filename):
