@@ -1,12 +1,9 @@
 from flask import Blueprint, render_template, request, jsonify, send_file, flash, redirect, url_for, send_from_directory
-from werkzeug.utils import secure_filename
 import os
-import tempfile
 import json
 
+from app.commands.commands import UploadCommand, PreprocessCommand, VisualizeCommand
 from app.services.pointcloud_service import PointCloudService
-from app.services.preprocessing_service import PreprocessingService
-from app.services.file_service import FileService
 
 lidar_bp = Blueprint('lidar', __name__)
 
@@ -38,12 +35,14 @@ def upload():
             flash("Aucun fichier sélectionné.", "error")
             return redirect(request.url)
 
+        from app.services.file_service import FileService
         if not FileService.allowed_file(file.filename):
             flash("Format de fichier non supporté. Utilisez .pcd, .ply ou .bin", "error")
             return redirect(request.url)
 
         try:
-            FileService.process_uploaded_file(file)
+            cmd = UploadCommand(file)
+            cmd.execute()
             flash("Fichier téléversé avec succès !", "success")
         except Exception as e:
             flash(f"Erreur lors du traitement du fichier : {str(e)}", "error")
@@ -76,10 +75,11 @@ def get_points(filename):
             return jsonify({"error": "Fichier non trouvé."}), 404
 
     try:
-        data_json = PointCloudService.get_point_cloud_json(filepath)
-        return jsonify(json.loads(data_json))
+        cmd = VisualizeCommand(filepath)
+        return jsonify(cmd.execute())
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @lidar_bp.route('/uploads/<path:filename>')
 def uploaded_file(filename):
@@ -101,19 +101,16 @@ def preprocess_and_return_json(step, filename):
         return jsonify({"error": "Fichier non trouvé."}), 404
 
     try:
-        # 🔹 Charger les points AVANT traitement
         original_points = PointCloudService.get_numpy_array(file_path)
         num_points_before = original_points.shape[0]
 
-        # 🔹 Appliquer le traitement
-        _, new_path = PreprocessingService.apply_step_and_save(file_path, step)
+        cmd = PreprocessCommand(file_path, step)
+        _, new_path = cmd.execute()
         processed_name = os.path.basename(new_path)
 
-        # 🔹 Charger les points APRÈS traitement
         processed_points = PointCloudService.get_numpy_array(new_path)
         num_points_after = processed_points.shape[0]
 
-        # 🔹 Retourner les infos nécessaires
         return jsonify({
             "filename": processed_name,
             "points": processed_points.tolist(),
@@ -122,6 +119,7 @@ def preprocess_and_return_json(step, filename):
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @lidar_bp.route("/download/<filename>")
 def download_file(filename):
