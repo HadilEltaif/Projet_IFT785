@@ -26,6 +26,12 @@
         <p>Prétraitez vos données pour une analyse plus précise.</p>
         <a class="btn btn-success" href="{{ url_for('lidar.preprocess_page') }}">Accéder</a>
     </div>
+
+    <div class="feature-card">
+        <h3>🧠 Clustering</h3>
+        <p>Segmenter automatiquement les objets détectés et visualiser les bounding boxes.</p>
+        <a class="btn btn-warning" href="{{ url_for('lidar.cluster_page') }}">Accéder</a>
+    </div>
       
 </section>
 {% endblock %}
