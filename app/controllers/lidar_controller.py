@@ -2,6 +2,10 @@ from flask import Blueprint, render_template, request, jsonify, send_file, flash
 import os
 import json
 
+from app.services.pointcloud_service import PointCloudService
+from app.services.clustering_service import ClusteringService
+from app.utils.geometry_utils import compute_bounding_box
+
 from app.commands.commands import UploadCommand, PreprocessCommand, VisualizeCommand
 from app.services.pointcloud_service import PointCloudService
 
@@ -127,3 +131,56 @@ def download_file(filename):
     if not os.path.exists(path):
         return "Fichier introuvable", 404
     return send_file(path, as_attachment=True)
+
+
+
+
+
+@lidar_bp.route("/cluster_page")
+def cluster_page():
+    try:
+        all_files = []
+
+        for folder in [UPLOAD_FOLDER, PROCESSED_FOLDER]:
+            if os.path.exists(folder):
+                files = [
+                    f for f in os.listdir(folder)
+                    if f.endswith(('.pcd', '.ply', '.bin'))
+                ]
+                all_files.extend(files)
+
+        # Supprimer les doublons (ex. même nom dans les deux dossiers)
+        unique_files = sorted(list(set(all_files)))
+
+    except Exception as e:
+        print(f"[Erreur lecture fichiers cluster_page] {e}")
+        unique_files = []
+
+    return render_template("pages/cluster.html", files=unique_files)
+
+@lidar_bp.route("/cluster/<filename>")
+def cluster(filename):
+    print(f"📦 Clustering reçu : {filename}")
+    possible_paths = [
+        os.path.join("uploads", "processed", filename),
+        os.path.join("uploads", filename)
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            try:
+                points = PointCloudService.get_numpy_array(path)
+                clusters = ClusteringService.cluster_points(points)
+                result = []
+                for cluster in clusters:
+                    box = compute_bounding_box(cluster)
+                    result.append({
+                        "points": cluster.tolist(),
+                        "bbox": box
+                    })
+                return jsonify({"clusters": result, "count": len(result)})
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
+    print("❌ Fichier non trouvé.")
+    return jsonify({"error": "Fichier non trouvé"}), 404
