@@ -116,6 +116,3 @@ Projet réalisé par **Hadil Eltaif** dans le cadre du cours *Approches orienté
 
 ---
 
-## 📜 Licence
-
-Ce projet est distribué sous licence MIT.
