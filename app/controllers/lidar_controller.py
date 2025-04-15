@@ -184,3 +184,25 @@ def cluster(filename):
 
     print("❌ Fichier non trouvé.")
     return jsonify({"error": "Fichier non trouvé"}), 404
+
+@lidar_bp.route("/pipeline/<filename>")
+def pipeline(filename):
+    file_path = os.path.join("uploads", filename)
+
+    if not os.path.exists(file_path):
+        return jsonify({"error": "Fichier non trouvé."}), 404
+
+    try:
+        # Charger le fichier en np.ndarray
+        original_points = PointCloudService.get_numpy_array(file_path)
+        processed_points = run_preprocessing_pipeline(original_points)
+
+        return jsonify({
+            "points_before": original_points.shape[0],
+            "points_after": processed_points.shape[0],
+            "processed": processed_points.tolist()
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
